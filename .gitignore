@@ -1,0 +1,6 @@
+# Ignore local copies of external libraries fetched by the packager
+Libs/
+
+# Ignore local system and editor configurations
+.DS_Store
+Thumbs.db

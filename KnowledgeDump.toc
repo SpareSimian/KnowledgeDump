@@ -1,0 +1,10 @@
+## Interface: 120007
+## Title: Knowledge Dump
+## Notes: Clean profession knowledge tracking for multiple expansions.
+## Author: YourName
+## Version: @project-version@
+## X-Date: @project-date-iso@
+## SavedVariables: KnowledgeDumpDB
+
+embeds.xml
+KnowledgeDump.lua

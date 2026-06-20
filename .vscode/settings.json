@@ -1,0 +1,19 @@
+{
+   "lua.runtime.version": "Lua 5.1",
+   "lua.diagnostics.globals": [
+                               "LibStub",
+                               "GetProfessions",
+                               "GetProfessionInfo",
+                               "C_ProfSpecs",
+                               "string",
+                               "tostring",
+                               "print",
+                               "ipairs"
+                              ],
+                              "lua.workspace.library": [
+      "${workspaceFolder}/Libs"
+      ],
+        "xml.schemas": {
+      "https://githubusercontent.com": "embeds.xml"
+   }
+}

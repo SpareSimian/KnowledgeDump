@@ -1,0 +1,16 @@
+package-as: KnowledgeDump
+
+externals:
+  Libs/LibStub: https://wowace.com
+  Libs/CallbackHandler-1.0: https://wowace.com
+  Libs/AceAddon-3.0: https://wowace.com
+  Libs/AceDB-3.0: https://wowace.com
+  Libs/AceConsole-3.0: https://wowace.com
+  Libs/AceEvent-3.0: https://wowace.com
+  Libs/LibDataBroker-1.1: https://github.com
+  Libs/LibDBIcon-1.0: https://wowace.com
+
+ignore:
+  - .vscode
+  - .pkgmeta
+  - README.md
