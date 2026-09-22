@@ -1,9 +1,127 @@
 -- Co-authored & architected with the assistance of Google Gemini (AI Collaborator)
 
+local function DumpTableToChat(t, name, indent)
+    name = name or "Table"
+    indent = indent or ""
+    
+    if indent == "" then
+        print(string.format("--- DUMPING: %s ---", name))
+    end
+
+    for k, v in pairs(t) do
+        local keyString = tostring(k)
+        if type(v) == "table" then
+            print(string.format("%s[%s] => Table {", indent, keyString))
+            DumpTableToChat(v, nil, indent .. "  ")
+            print(string.format("%s}", indent))
+        else
+            print(string.format("%s[%s] => %s", indent, keyString, tostring(v)))
+        end
+    end
+    
+    if indent == "" then
+        print("--- END OF DUMP ---")
+    end
+end
+
+-- local TextDump = LibStub("LibTextDump-1.0")
+-- local debugWindow = TextDump:New(name)
+
+local function DumpTableToTextWindow(t, name, indent)
+    name = name or "Table"
+    indent = indent or ""
+    
+    if indent == "" then
+        debugWindow:AddLine(string.format("--- DUMPING: %s ---", name))
+    end
+
+    for k, v in pairs(t) do
+        local keyString = tostring(k)
+        if type(v) == "table" then
+            debugWindow:AddLine(string.format("%s[%s] => Table {", indent, keyString))
+            DumpTableToTextWindow(v, nil, indent .. "  ")
+            debugWindow:AddLine(string.format("%s}", indent))
+        else
+            debugWindow:AddLine(string.format("%s[%s] => %s", indent, keyString, tostring(v)))
+        end
+    end
+    
+    if indent == "" then
+        debugWindow:AddLine("--- END OF DUMP ---")
+    end
+end
+
+local function tableToString(tbl, indent)
+    indent = indent or ""
+    local nextIndent = indent .. "    "
+    local result = "{\n"
+    
+    for k, v in pairs(tbl) do
+        -- Format the key
+        local keyStr
+        if type(k) == "string" then
+            if k:match("^[a-zA-Z_][a-zA-Z0-9_]*$") then
+                keyStr = k
+            else
+                keyStr = '["' .. k .. '"]'
+            end
+        else
+            keyStr = "[" .. tostring(k) .. "]"
+        end
+        
+        -- Format the value
+        local valStr
+        if type(v) == "table" then
+            valStr = tableToString(v, nextIndent)
+        elseif type(v) == "string" then
+            valStr = string.format("%q", v)
+        else
+            valStr = tostring(v)
+        end
+        
+        result = result .. nextIndent .. keyStr .. " = " .. valStr .. ",\n"
+    end
+    
+    return result .. indent .. "}"
+end
+
+-- 1. Register the unique popup window configuration
+StaticPopupDialogs["COPY_TEXT_POPUP"] = {
+    text = "Press Ctrl+C to copy:",
+    button1 = "Done",
+    hasEditBox = true,
+    editBoxWidth = 350,
+    maxLetters = 99999,
+    
+    OnShow = function(self, data)
+        -- 'data' passes the string you want to show
+        local editBox = self.GetEditBox and self:GetEditBox() or self.editBox
+        editBox:SetText(data or "")
+        editBox:SetFocus()
+        editBox:HighlightText()
+    end,
+    
+    EditBoxOnEnterPressed = function(self)
+        self:GetParent():Hide()
+    end,
+    EditBoxOnEscapePressed = function(self)
+        self:GetParent():Hide()
+    end,
+    
+    timeout = 0,
+    whileDead = true,
+    hideOnEscape = true,
+    preferredIndex = 3,
+}
+
+--DumpTableToChat(childProfs, "childProfs")            
+--self:Print(string.format("profName %s profIdx %s", tostring(profName), tostring(profIdx)))
+
+-- Initialize the AceAddon, mixing in Console and Event handling libraries
 local KnowledgeDump = LibStub("AceAddon-3.0"):NewAddon("KnowledgeDump", "AceConsole-3.0", "AceEvent-3.0")
 local icon = LibStub:GetLibrary("LibDBIcon-1.0", true)
 
--- 1. Setup the Localization Table with English Fallbacks
+-- Setup the Localization Table with English Fallbacks
 local L = setmetatable({}, { __index = function(t, k) t[k] = k return k end })
 
 --@localization(locale="koKR", format="lua_keyword_table", handle-subnamespaces="concat")@
@@ -16,39 +134,19 @@ local L = setmetatable({}, { __index = function(t, k) t[k] = k return k end })
 --@localization(locale="ruRU", format="lua_keyword_table", handle-subnamespaces="concat")@
 --@localization(locale="zhTW", format="lua_keyword_table", handle-subnamespaces="concat")@
 
--- Hardcoded Max Knowledge targets per expansion tier
-local EXPANSIONS = {
-    { name = "Midnight",    id = 11, maxes = { [171] = 500, [164] = 500, [185] = 500, [172] = 500, [202] = 500, [182] = 500, [393] = 500, [197] = 500, [165] = 170, [186] = 160, [356] = 180 } },
-    { name = "TWW",         id = 10, maxes = { [171] = 510, [164] = 620, [185] = 515, [172] = 460, [202] = 540, [182] = 560, [393] = 515, [197] = 530, [165] = 170, [186] = 160, [356] = 180 } },
-    { name = "Dragonflight", id = 9,  maxes = { [171] = 510, [164] = 570, [185] = 475, [172] = 460, [202] = 540, [182] = 560, [393] = 515, [197] = 530, [165] = 170, [186] = 160, [356] = 180 } },
-}
-
 function KnowledgeDump:DumpKnowledge()
-    self:Print(L["--- Profession Knowledge Dump ---"])
-    
-    local prof1, prof2 = GetProfessions()
-    local profs = { prof1, prof2 }
-    local linesPrinted = 0
-
-    for _, profIdx in ipairs(profs) do
-        if profIdx then
-            local profName, _, _, _, _, _, profID = GetProfessionInfo(profIdx)
-            
-            for _, exp in ipairs(EXPANSIONS) do
-                local specTabInfo = C_ProfSpecs.GetSpecTabInfoForSkillLine(profID)
-                if specTabInfo and #specTabInfo > 0 then
-                    local currentKnowledge = C_ProfSpecs.GetKnowledgePointsForSkillLine(profID) or 0
-                    local maxKnowledge = exp.maxes[profID] or "???"
-                    
-                    self:Print(string.format("|cff00ffff%s|r (%s): %s/%s", profName, exp.name, tostring(currentKnowledge), tostring(maxKnowledge)))
-                    linesPrinted = linesPrinted + 1
-                end
-            end
+    if WeeklyKnowledge and WeeklyKnowledge.Data and WeeklyKnowledge.Data.ScanProfessions then
+        self:Print(L["--- Profession Knowledge Dump ---"])
+        WeeklyKnowledge.Data:ScanProfessions()
+        -- DumpTableToChat(WeeklyKnowledge.Data, "WeeklyKnowledge.Data")
+        -- CopyToClipboard(tableToString(WeeklyKnowledge.Data, "WeeklyKnowledge.Data"))
+        -- StaticPopup_Show("COPY_TEXT_POPUP", nil, nil, tableToString(WeeklyKnowledge.Data, "WeeklyKnowledge.Data"))
+        -- DumpTableToTextWindow(WeeklyKnowledge.Data:GetCharacter().professions, "WeeklyKnowledge character professions")
+        -- debugWindow:Display()
+        if not KnowledgeDumpDB then
+            KnowledgeDumpDB = {}
         end
-    end
-    
-    if linesPrinted == 0 then
-        self:Print(L["No primary professions found on this character."])
+        KnowledgeDumpDB["WeeklyKnowledgeDB"] = WeeklyKnowledge.Data
     end
 end
 
